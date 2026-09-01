@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FLIXHUB - Watch Movies & TV Shows</title>
+  <link rel="preconnect" href="https://image.tmdb.org" />
+  <link rel="preconnect" href="https://www.vidking.net" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="navbar" id="navbar">
+    <div class="nav-left">
+      <a href="#" class="logo" id="homeLink">FLIXHUB</a>
+      <nav class="nav-links">
+        <a href="#" data-type="movie" class="nav-item active">Home</a>
+        <a href="#" data-type="tv" class="nav-item">TV Shows</a>
+        <a href="#" data-type="movie" class="nav-item">Movies</a>
+        <a href="#" data-type="anime" class="nav-item">Anime</a>
+        <div class="dropdown">
+          <button class="nav-item dropdown-btn" id="browseBtn">Browse ▾</button>
+          <div class="dropdown-menu" id="browseMenu">
+            <button data-genre="28">Action</button>
+            <button data-genre="35">Comedy</button>
+            <button data-genre="27">Horror</button>
+            <button data-genre="878">Sci-Fi</button>
+            <button data-genre="10749">Romance</button>
+            <button data-genre="18">Drama</button>
+            <button data-genre="53">Thriller</button>
+            <button data-genre="16">Animation</button>
+          </div>
+        </div>
+      </nav>
+    </div>
+    <div class="nav-right">
+      <button class="icon-btn" id="searchToggle" aria-label="Search">🔍</button>
+      <button class="icon-btn" id="settingsBtn" aria-label="Settings">⚙️</button>
+    </div>
+  </header>
+
+  <!-- Search overlay -->
+  <div class="search-overlay" id="searchOverlay">
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Titles, people, genres" autocomplete="off" />
+      <button class="close-search" id="closeSearch">✕</button>
+    </div>
+    <div class="search-suggestions" id="searchSuggestions"></div>
+  </div>
+
+  <!-- Hero banner -->
+  <section class="hero" id="hero">
+    <div class="hero-slider" id="heroSlider"></div>
+    <div class="hero-dots" id="heroDots"></div>
+  </section>
+
+  <main class="content" id="content">
+
+    <!-- Continue watching (populated dynamically) -->
+    <section class="row hidden" id="continueWatching">
+      <h2 class="row-title"><span class="sep">|</span> Continue Watching</h2>
+      <div class="row-container" id="continueWatchingContent"></div>
+    </section>
+
+    <!-- Trending -->
+    <section class="row">
+      <h2 class="row-title"><span class="sep">|</span> <span id="featuredTitle">Trending Now</span></h2>
+      <div class="row-container" id="featuredContent"></div>
+    </section>
+
+    <!-- Popular -->
+    <section class="row">
+      <h2 class="row-title"><span class="sep">|</span> <span id="popularTitle">Popular on FLIXHUB</span></h2>
+      <div class="row-container" id="popularContent"></div>
+    </section>
+
+    <!-- Search results -->
+    <section class="row hidden" id="searchResults">
+      <h2 class="row-title"><span class="sep">|</span> <span id="searchResultsTitle">Search Results</span></h2>
+      <p class="results-count" id="searchResultsCount"></p>
+      <div class="row-container search-grid" id="searchContent"></div>
+    </section>
+  </main>
+
+  <div class="loading hidden" id="loading">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Details modal -->
+  <div class="modal details-modal" id="detailsModal">
+    <div class="modal-dialog details-dialog">
+      <button class="modal-close" id="closeDetails">✕</button>
+      <div id="detailsContent"></div>
+    </div>
+  </div>
+
+  <!-- Player modal -->
+  <div class="modal player-modal" id="playerModal">
+    <div class="player-wrapper">
+      <button class="modal-close player-close" id="closePlayer">✕</button>
+      <div class="player-loading hidden" id="playerLoading">
+        <img id="playerPoster" alt="" />
+        <h3 id="playerTitle"></h3>
+        <div class="spinner"></div>
+      </div>
+      <iframe id="videoPlayer" src="" frameborder="0" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture"></iframe>
+    </div>
+  </div>
+
+  <!-- Settings modal -->
+  <div class="modal settings-modal" id="settingsModal">
+    <div class="modal-dialog settings-dialog">
+      <button class="modal-close" id="closeSettings">✕</button>
+      <h2>Player Settings</h2>
+      <div class="setting-row">
+        <span>Accent color</span>
+        <div class="color-row">
+          <button class="color-btn active" data-color="e50914" style="background:#e50914"></button>
+          <button class="color-btn" data-color="ff0000" style="background:#ff0000"></button>
+          <button class="color-btn" data-color="9146ff" style="background:#9146ff"></button>
+          <button class="color-btn" data-color="5865f2" style="background:#5865f2"></button>
+          <button class="color-btn" data-color="1db954" style="background:#1db954"></button>
+          <button class="color-btn" data-color="f59e0b" style="background:#f59e0b"></button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <span>Autoplay</span>
+        <label class="toggle"><input type="checkbox" id="autoPlayToggle" checked /><span></span></label>
+      </div>
+      <div class="setting-row">
+        <span>Episode selector</span>
+        <label class="toggle"><input type="checkbox" id="episodeSelectorToggle" checked /><span></span></label>
+      </div>
+      <div class="setting-row">
+        <span>Next episode button</span>
+        <label class="toggle"><input type="checkbox" id="nextEpisodeToggle" checked /><span></span></label>
+      </div>
+      <button class="danger-btn" id="clearProgressBtn">Clear watch progress</button>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>FLIXHUB — data by <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">TMDB</a>, streaming by VidKing. For educational purposes only.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
