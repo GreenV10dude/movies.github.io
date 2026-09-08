@@ -58,7 +58,7 @@ body {
   letter-spacing: -1px;
   text-transform: uppercase;
   text-decoration: none;
-  text-shadow: 0 0 10px rgba(229, 9, 20, 0.5);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--netflix-red) 50%, transparent);
 }
 
 .nav-links {
@@ -123,6 +123,11 @@ body {
 .dropdown-menu button:hover {
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-primary);
+}
+
+.dropdown-menu button.active {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .nav-right {
@@ -831,6 +836,83 @@ body {
   color: #fff;
 }
 
+.region-select {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 14px;
+  max-width: 200px;
+}
+
+.region-note {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 10px;
+}
+
+/* ===== Consent banner (non-blocking) ===== */
+.consent-banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 4%;
+  background: rgba(11, 11, 11, 0.98);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.consent-banner strong {
+  color: var(--text-primary);
+}
+
+.consent-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.consent-allow {
+  background: var(--netflix-red);
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.consent-decline,
+.consent-more {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 10px 16px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.legal-body p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
 /* ===== Loading ===== */
 .loading {
   position: fixed;
@@ -923,5 +1005,15 @@ body {
 
   .details-info {
     padding: 0 20px 30px;
+  }
+
+  .consent-banner {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: left;
+  }
+
+  .consent-actions {
+    flex-wrap: wrap;
   }
 }

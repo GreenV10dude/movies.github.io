@@ -11,8 +11,23 @@ const PLAYER_CONFIG = {
   episodeSelector: true,
 };
 
+// Top 5 global platforms (TMDB watch providers, US catalog by default)
+const PLATFORMS = {
+  netflix: { name: 'Netflix', provider: 8, color: '#E50914' },
+  prime: { name: 'Prime Video', provider: 9, color: '#00A8E1' },
+  disney: { name: 'Disney+', provider: 337, color: '#113CCF' },
+  max: { name: 'Max', provider: 384, color: '#5822B4' },
+  appletv: { name: 'Apple TV+', provider: 350, color: '#A3A3A3' },
+};
+
+const DEFAULT_REGION = 'US';
+const VALID_REGIONS = ['US', 'GB', 'CA', 'AU', 'IN', 'DE', 'FR', 'JP', 'BR', 'MX', 'ES', 'IT', 'KR', 'NL', 'SE'];
+
 // ===== State =====
 let currentType = 'movie';
+let currentPlatform = null;
+let userRegion = DEFAULT_REGION;
+let regionSource = 'default';
 let currentShow = null;
 let currentSeason = 1;
 let totalSeasons = 1;
@@ -113,7 +128,16 @@ function qualityBadge(item) {
 }
 
 // ===== Content loading =====
+function refreshCurrentView() {
+  if (currentPlatform && PLATFORMS[currentPlatform]) {
+    loadPlatformContent(currentPlatform);
+  } else {
+    loadContent();
+  }
+}
+
 async function loadContent() {
+  currentPlatform = null;
   showLoading(true);
   searchResults.classList.add('hidden');
   continueWatching.classList.add('hidden');
@@ -161,6 +185,39 @@ async function loadGenreContent(genreId, genreName) {
 
   if (movies && movies.results) renderContent(movies.results.slice(0, 12), featuredContent, 'movie');
   if (tv && tv.results) renderContent(tv.results.slice(0, 12), popularContent, 'tv');
+
+  showLoading(false);
+}
+
+async function loadPlatformContent(platformKey) {
+  const platform = PLATFORMS[platformKey];
+  if (!platform) return;
+  currentPlatform = platformKey;
+  showLoading(true);
+  searchResults.classList.add('hidden');
+  continueWatching.classList.add('hidden');
+
+  $('featuredTitle').textContent = `${platform.name} — Movies (${userRegion})`;
+  $('popularTitle').textContent = `${platform.name} — TV Shows (${userRegion})`;
+
+  loadContinueWatching();
+
+  const base = `with_watch_providers=${platform.provider}&watch_region=${encodeURIComponent(userRegion)}&with_watch_monetization_types=flatrate&sort_by=popularity.desc`;
+  const [movies, tv] = await Promise.all([
+    fetchTMDB(`/discover/movie?${base}`),
+    fetchTMDB(`/discover/tv?${base}`),
+  ]);
+
+  if (movies && movies.results && movies.results.length) {
+    renderContent(movies.results.slice(0, 12), featuredContent, 'movie');
+  } else {
+    featuredContent.innerHTML = '<p style="color:#b3b3b3;padding:20px 0">No movies found for this platform in your region.</p>';
+  }
+  if (tv && tv.results && tv.results.length) {
+    renderContent(tv.results.slice(0, 12), popularContent, 'tv');
+  } else {
+    popularContent.innerHTML = '<p style="color:#b3b3b3;padding:20px 0">No TV shows found for this platform in your region.</p>';
+  }
 
   showLoading(false);
 }
@@ -438,7 +495,7 @@ async function playMovie(tmdbId) {
   const details = await fetchTMDB(`/movie/${tmdbId}`);
   showPlayerLoading(details);
 
-  const params = new URLSearchParams({ color: PLAYER_CONFIG.color, autoPlay: 'true' });
+  const params = new URLSearchParams({ color: PLAYER_CONFIG.color, autoPlay: String(PLAYER_CONFIG.autoPlay) });
   const embedUrl = `${VIDKING_BASE_URL}/embed/movie/${tmdbId}?${params}`;
 
   videoPlayer.src = embedUrl;
@@ -463,9 +520,9 @@ function playEpisode(tmdbId, season, episode) {
 
   const params = new URLSearchParams({
     color: PLAYER_CONFIG.color,
-    autoPlay: 'true',
-    nextEpisode: PLAYER_CONFIG.nextEpisode,
-    episodeSelector: PLAYER_CONFIG.episodeSelector,
+    autoPlay: String(PLAYER_CONFIG.autoPlay),
+    nextEpisode: String(PLAYER_CONFIG.nextEpisode),
+    episodeSelector: String(PLAYER_CONFIG.episodeSelector),
   });
 
   const embedUrl = `${VIDKING_BASE_URL}/embed/tv/${tmdbId}/${season}/${episode}?${params}`;
@@ -550,15 +607,139 @@ function saveSettings() {
   } catch {}
 }
 
+function normalizeColor(color) {
+  return String(color || '').replace('#', '').toLowerCase();
+}
+
+function applyAccentColor() {
+  const hex = `#${normalizeColor(PLAYER_CONFIG.color)}`;
+  document.documentElement.style.setProperty('--netflix-red', hex);
+}
+
 function loadSettings() {
   try {
     const s = JSON.parse(localStorage.getItem('flixhub_settings') || '{}');
     Object.assign(PLAYER_CONFIG, s);
   } catch {}
-  document.querySelectorAll('.color-btn').forEach((b) => b.classList.toggle('active', b.dataset.color === PLAYER_CONFIG.color));
+  PLAYER_CONFIG.color = normalizeColor(PLAYER_CONFIG.color) || 'e50914';
+  applyAccentColor();
+  document.querySelectorAll('.color-btn').forEach((b) => b.classList.toggle('active', normalizeColor(b.dataset.color) === PLAYER_CONFIG.color));
   $('autoPlayToggle').checked = PLAYER_CONFIG.autoPlay;
   $('nextEpisodeToggle').checked = PLAYER_CONFIG.nextEpisode;
   $('episodeSelectorToggle').checked = PLAYER_CONFIG.episodeSelector;
+  loadRegionState();
+}
+
+// ===== Region + consent (client-side only, no IP stored) =====
+function getConsent() {
+  try {
+    return localStorage.getItem('flixhub_consent');
+  } catch {
+    return null;
+  }
+}
+
+function setConsent(value) {
+  try {
+    localStorage.setItem('flixhub_consent', value);
+    localStorage.setItem('flixhub_consent_at', String(Date.now()));
+  } catch {}
+}
+
+function updateRegionNote() {
+  const note = $('regionNote');
+  if (note) note.textContent = `Catalog region: ${userRegion} · ${regionSource === 'ip' ? 'auto-detected' : regionSource}`;
+  const select = $('regionSelect');
+  if (select && VALID_REGIONS.includes(userRegion)) select.value = userRegion;
+}
+
+function loadRegionState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('flixhub_region') || 'null');
+    if (saved && typeof saved.code === 'string' && VALID_REGIONS.includes(saved.code.toUpperCase())) {
+      userRegion = saved.code.toUpperCase();
+      regionSource = saved.source === 'manual' ? 'manual' : 'ip';
+    }
+  } catch {}
+  updateRegionNote();
+}
+
+function applyRegion(code, source) {
+  const upper = String(code || '').toUpperCase();
+  if (!VALID_REGIONS.includes(upper)) return;
+  userRegion = upper;
+  regionSource = source;
+  try {
+    localStorage.setItem('flixhub_region', JSON.stringify({ code: upper, source, at: Date.now() }));
+  } catch {}
+  updateRegionNote();
+  refreshCurrentView();
+}
+
+async function fetchWithTimeout(url, ms) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms || 5000);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function detectRegionByIP() {
+  // Primary: ipwho.is (free, no key, CORS-enabled). Fallback: ipapi.co. Never throws.
+  try {
+    const res = await fetchWithTimeout('https://ipwho.is/', 5000);
+    if (res && res.ok) {
+      const data = await res.json();
+      const code = data && data.success !== false && data.country_code ? String(data.country_code).toUpperCase() : '';
+      if (VALID_REGIONS.includes(code)) {
+        applyRegion(code, 'ip');
+        return code;
+      }
+    }
+  } catch {}
+  try {
+    const res = await fetchWithTimeout('https://ipapi.co/country/', 5000);
+    if (res && res.ok) {
+      const text = (await res.text()).trim().toUpperCase();
+      if (VALID_REGIONS.includes(text)) {
+        applyRegion(text, 'ip');
+        return text;
+      }
+    }
+  } catch {}
+  updateRegionNote();
+  return null;
+}
+
+function initConsent() {
+  const banner = $('consentBanner');
+  const legalModal = $('legalModal');
+  if (!banner) return;
+  const consent = getConsent();
+  if (!consent) banner.classList.remove('hidden');
+
+  $('consentAllow')?.addEventListener('click', async () => {
+    setConsent('granted');
+    banner.classList.add('hidden');
+    const btn = $('consentAllow');
+    if (btn) btn.textContent = 'Detecting…';
+    await detectRegionByIP();
+    if (btn) btn.textContent = 'Allow region detection';
+  });
+  $('consentDecline')?.addEventListener('click', () => {
+    setConsent('declined');
+    banner.classList.add('hidden');
+    // Stay on US defaults (or previously saved manual region), no IP lookup.
+    updateRegionNote();
+  });
+  $('consentMore')?.addEventListener('click', () => legalModal?.classList.add('active'));
+  $('closeLegal')?.addEventListener('click', () => legalModal?.classList.remove('active'));
+  legalModal?.addEventListener('click', (e) => {
+    if (e.target === legalModal) legalModal.classList.remove('active');
+  });
 }
 
 // ===== Event listeners =====
@@ -566,6 +747,7 @@ function setupEvents() {
   navItems.forEach((item) => {
     item.addEventListener('click', () => {
       navItems.forEach((b) => b.classList.remove('active'));
+      document.querySelectorAll('[data-platform]').forEach((b) => b.classList.remove('active'));
       item.classList.add('active');
       currentType = item.dataset.type;
       loadContent();
@@ -575,20 +757,44 @@ function setupEvents() {
   document.querySelectorAll('[data-genre]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const name = btn.textContent;
-      document.querySelector('.dropdown').classList.remove('open');
+      document.querySelectorAll('.dropdown').forEach((d) => d.classList.remove('open'));
+      navItems.forEach((b) => b.classList.remove('active'));
+      document.querySelectorAll('[data-platform]').forEach((b) => b.classList.remove('active'));
       loadGenreContent(btn.dataset.genre, name);
     });
   });
 
-  const browseBtn = $('browseBtn');
-  browseBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    document.querySelector('.dropdown').classList.toggle('open');
+  document.querySelectorAll('[data-platform]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.dropdown').forEach((d) => d.classList.remove('open'));
+      navItems.forEach((b) => b.classList.remove('active'));
+      document.querySelectorAll('[data-platform]').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      loadPlatformContent(btn.dataset.platform);
+    });
   });
-  document.addEventListener('click', () => document.querySelector('.dropdown').classList.remove('open'));
+
+  const browseBtn = $('browseBtn');
+  browseBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const dropdown = browseBtn.closest('.dropdown');
+    const wasOpen = dropdown.classList.contains('open');
+    document.querySelectorAll('.dropdown').forEach((d) => d.classList.remove('open'));
+    if (!wasOpen) dropdown.classList.add('open');
+  });
+  const platformsBtn = $('platformsBtn');
+  platformsBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const dropdown = platformsBtn.closest('.dropdown');
+    const wasOpen = dropdown.classList.contains('open');
+    document.querySelectorAll('.dropdown').forEach((d) => d.classList.remove('open'));
+    if (!wasOpen) dropdown.classList.add('open');
+  });
+  document.addEventListener('click', () => document.querySelectorAll('.dropdown').forEach((d) => d.classList.remove('open')));
 
   $('homeLink').addEventListener('click', (e) => {
     e.preventDefault();
+    document.querySelectorAll('[data-platform]').forEach((b) => b.classList.remove('active'));
     searchResults.classList.add('hidden');
     loadContent();
   });
@@ -618,7 +824,8 @@ function setupEvents() {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.color-btn').forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
-      PLAYER_CONFIG.color = btn.dataset.color;
+      PLAYER_CONFIG.color = normalizeColor(btn.dataset.color);
+      applyAccentColor();
       saveSettings();
     });
   });
@@ -642,6 +849,10 @@ function setupEvents() {
     settingsModal.classList.remove('active');
   });
 
+  $('regionSelect')?.addEventListener('change', (e) => {
+    applyRegion(e.target.value, 'manual');
+  });
+
   $('closePlayer').addEventListener('click', closePlayerModal);
   $('closeDetails').addEventListener('click', () => detailsModal.classList.remove('active'));
 
@@ -661,6 +872,7 @@ function setupEvents() {
       searchOverlay.classList.remove('active');
       detailsModal.classList.remove('active');
       settingsModal.classList.remove('active');
+      $('legalModal')?.classList.remove('active');
       closePlayerModal();
     }
   });
@@ -679,6 +891,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initDOM();
   setupEvents();
   loadSettings();
+  initConsent();
   setupProgressTracking();
   loadHeroBanner();
   loadContent();

@@ -30,6 +30,16 @@
             <button data-genre="16">Animation</button>
           </div>
         </div>
+        <div class="dropdown">
+          <button class="nav-item dropdown-btn" id="platformsBtn">Platforms ▾</button>
+          <div class="dropdown-menu" id="platformsMenu">
+            <button data-platform="netflix">Netflix</button>
+            <button data-platform="prime">Prime Video</button>
+            <button data-platform="disney">Disney+</button>
+            <button data-platform="max">Max</button>
+            <button data-platform="appletv">Apple TV+</button>
+          </div>
+        </div>
       </nav>
     </div>
     <div class="nav-right">
@@ -134,13 +144,58 @@
         <span>Next episode button</span>
         <label class="toggle"><input type="checkbox" id="nextEpisodeToggle" checked /><span></span></label>
       </div>
+      <div class="setting-row">
+        <span>Region (catalog)</span>
+        <select id="regionSelect" class="region-select">
+          <option value="US">United States (US)</option>
+          <option value="GB">United Kingdom (GB)</option>
+          <option value="CA">Canada (CA)</option>
+          <option value="AU">Australia (AU)</option>
+          <option value="IN">India (IN)</option>
+          <option value="DE">Germany (DE)</option>
+          <option value="FR">France (FR)</option>
+          <option value="JP">Japan (JP)</option>
+          <option value="BR">Brazil (BR)</option>
+          <option value="MX">Mexico (MX)</option>
+          <option value="ES">Spain (ES)</option>
+          <option value="IT">Italy (IT)</option>
+          <option value="KR">South Korea (KR)</option>
+          <option value="NL">Netherlands (NL)</option>
+          <option value="SE">Sweden (SE)</option>
+        </select>
+      </div>
+      <p class="region-note" id="regionNote">Catalog region: US</p>
       <button class="danger-btn" id="clearProgressBtn">Clear watch progress</button>
     </div>
   </div>
 
   <footer class="footer">
-    <p>FLIXHUB — data by <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">TMDB</a>, streaming by VidKing. For educational purposes only.</p>
+    <p>FLIXHUB — data by <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">TMDB</a>, streaming by VidKing. For educational purposes only. Region detection is optional and client-side only.</p>
   </footer>
+
+  <!-- Legal / region consent banner (non-blocking) -->
+  <div class="consent-banner hidden" id="consentBanner" role="dialog" aria-live="polite">
+    <p><strong>Heads up:</strong> FLIXHUB is for educational purposes only. Content data by TMDB, playback via a third-party provider. Availability varies by country. You must be 16+ and comply with your local laws. Allow country detection from your IP to show the right catalogs? No IP is stored — only a 2-letter country code on your device.</p>
+    <div class="consent-actions">
+      <button class="consent-allow" id="consentAllow">Allow region detection</button>
+      <button class="consent-decline" id="consentDecline">Use US defaults</button>
+      <button class="consent-more" id="consentMore">Learn more</button>
+    </div>
+  </div>
+
+  <!-- Legal details modal -->
+  <div class="modal legal-modal" id="legalModal">
+    <div class="modal-dialog settings-dialog">
+      <button class="modal-close" id="closeLegal">✕</button>
+      <h2>Before you continue</h2>
+      <div class="legal-body">
+        <p>FLIXHUB is a demo for educational purposes only. We do not host any video files. Metadata and artwork come from TMDB; playback comes from a third-party service with its own terms and tracking.</p>
+        <p>Streaming availability differs by country. If you tap “Allow region detection”, we make a one-time country lookup from your IP (via ipwho.is, fallback ipapi.co) and save only the 2-letter country code in your browser. Your full IP address is never stored by us. Tap “Use US defaults” to skip detection entirely.</p>
+        <p>You can change or reset your region anytime in Settings → Region. Clearing site data removes your choice.</p>
+        <p>You are responsible for complying with the laws in your location. Rights belong to their respective owners. This notice does not constitute legal advice.</p>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>
